@@ -24,15 +24,20 @@ module HGeometry.Polygon.Class
 
 import Control.Lens
 import Data.Function (on)
-import HGeometry.Lens.Util
--- import qualified Data.Functor.Apply as Apply
 import Data.Semigroup (First(..))
+import HGeometry.Ext
+import HGeometry.Lens.Util
 import HGeometry.LineSegment
 import HGeometry.Point
 import HGeometry.Properties
 import HGeometry.Vector
 import Hiraffe.Graph
 
+
+-- instance HasOuterBoundary polygon => HasOuterBoundary (polygon :+ extra) where
+--   outerBoundaryVertexAt u = core.outerBoundaryVertexAt u
+--   ccwOuterBoundaryFrom u = core.ccwOuterBoundaryFrom u
+--   cwOuterBoundaryFrom u = core.cwOuterBoundaryFrom
 
 --------------------------------------------------------------------------------
 -- ^ A class for items that have an outer boundary.

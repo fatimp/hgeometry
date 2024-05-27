@@ -171,3 +171,16 @@ executable hgeometry-polyLineDrawing
   main-is:        Main.hs
   other-modules:
        Miso.Event.Extra
+
+--------------------------------------------------------------------------------
+-- * Triangulate World
+
+executable hgeometry-triangulateWorld
+  import:         setup
+  hs-source-dirs: triangulateWorld
+  main-is:        Main.hs
+  build-depends:
+      optparse-applicative >= 0.18
+    , filepath >= 1.4.100
+  -- other-modules:
+  --      Miso.Event.Extra
