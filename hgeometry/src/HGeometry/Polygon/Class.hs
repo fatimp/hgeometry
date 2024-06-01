@@ -32,12 +32,7 @@ import HGeometry.Point
 import HGeometry.Properties
 import HGeometry.Vector
 import Hiraffe.Graph
-
-
--- instance HasOuterBoundary polygon => HasOuterBoundary (polygon :+ extra) where
---   outerBoundaryVertexAt u = core.outerBoundaryVertexAt u
---   ccwOuterBoundaryFrom u = core.ccwOuterBoundaryFrom u
---   cwOuterBoundaryFrom u = core.cwOuterBoundaryFrom
+import Hiraffe.Graph.Class ()
 
 --------------------------------------------------------------------------------
 -- ^ A class for items that have an outer boundary.
@@ -272,3 +267,18 @@ class ( HasOuterBoundary polygon
 
 {-
 -}
+
+instance ( HasOuterBoundary polygon
+         ) => HasOuterBoundary (polygon :+ extra) where
+  outerBoundary = core.outerBoundary
+  outerBoundaryVertexAt u = core.outerBoundaryVertexAt u
+  ccwOuterBoundaryFrom u = core.ccwOuterBoundaryFrom u
+  cwOuterBoundaryFrom u = core.cwOuterBoundaryFrom u
+  outerBoundaryEdges = core.outerBoundaryEdges
+  outerBoundaryEdgeAt u = core.outerBoundaryEdgeAt u
+
+instance Polygon_ polygon point r => Polygon_ (polygon :+ extra) point r where
+  area = area . view core
+  extremes v = extremes v . view core
+  ccwPredecessorOf u = core.ccwPredecessorOf u
+  ccwSuccessorOf u = core.ccwSuccessorOf u

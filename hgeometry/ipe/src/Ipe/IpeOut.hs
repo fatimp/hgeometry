@@ -36,6 +36,7 @@ import           HGeometry.LineSegment
 import           HGeometry.Number.Radical
 import           HGeometry.Point
 import           HGeometry.PolyLine
+import           HGeometry.Polygon.Class
 import           HGeometry.Polygon.Convex
 import           HGeometry.Polygon.Simple
 import           HGeometry.Properties
@@ -161,7 +162,7 @@ instance (Fractional r, Ord r, Point_ point 2 r,Show r, Show point) => HasDefaul
 
 instance HasDefaultIpeOut (SimplePolygon (Point 2 r)) where
   type DefaultIpeOut (SimplePolygon (Point 2 r)) = Path
-  defIO = ipePolygon
+  defIO = ipePolygon'
 
 -- instance HasDefaultIpeOut (SomePolygon p r) where
 --   type DefaultIpeOut (SomePolygon p r) = Path
@@ -283,8 +284,14 @@ pathSegment = PolyLineSegment . fmap (^.asPoint) . lineSegmentToPolyLine
 
 
 -- | Draw a polygon
-ipePolygon    :: IpeOut (SimplePolygon (Point 2 r)) Path r
-ipePolygon pg = pg^.re _asSimplePolygon :+ mempty
+ipePolygon    :: SimplePolygon_ simplePolygon point r
+              => IpeOut simplePolygon Path r
+ipePolygon pg = ipePolygon' $ uncheckedFromCCWPoints (pg^..outerBoundary.asPoint)
+  -- TODO: would be nice to avoid rountripping through a list here
+
+ipePolygon'    ::IpeOut (SimplePolygon (Point 2 r)) Path r
+ipePolygon' pg = pg^.re _asSimplePolygon :+ mempty
+  -- TODO: would be nice to avoid rountripping through a list here
 -- (first (const ()) -> pg) = case pg of
 --                SimplePolygon{} -> pg^.re _asSimplePolygon :+ mempty
 --                -- MultiPolygon{}  -> pg^.re _asMultiPolygon  :+ mempty
@@ -292,7 +299,7 @@ ipePolygon pg = pg^.re _asSimplePolygon :+ mempty
 
 -- | Draw a Rectangle
 ipeRectangle   :: Num r => IpeOut (Rectangle (Point 2 r)) Path r
-ipeRectangle r = ipePolygon $ uncheckedFromCCWPoints [tl,tr,br,bl]
+ipeRectangle r = ipePolygon' $ uncheckedFromCCWPoints [tl,tr,br,bl]
   where
     Corners tl tr br bl = corners r
 
