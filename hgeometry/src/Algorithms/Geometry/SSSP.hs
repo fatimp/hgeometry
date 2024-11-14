@@ -10,6 +10,7 @@ module Algorithms.Geometry.SSSP
   ( SSSP
   , triangulate
   , sssp
+  , sssp'
   , visibilityDual
   , visibilityFinger
   , visibilitySensitive
@@ -47,6 +48,9 @@ import qualified Data.Vector.Unboxed             as VU
 import           Data.Vinyl
 import           Data.Vinyl.CoRec
 
+import           Control.Monad.ST
+import qualified Data.Vector.Unboxed.Mutable     as VUM
+
 {-
 type AbsOffset = Int
 
@@ -74,14 +78,14 @@ triangulate p =
   let poly' = snd $ bimapAccumL (\a _ -> (a+1,a)) (,) 0 $ unsafeFromPoints $ toPoints p
   in triangulate' @s poly'
 
--- | \( O(n) \) Single-Source shortest path.
-sssp :: (Ord r, Fractional r)
-  => PlaneGraph s Int PolygonEdgeType PolygonFaceData r
+sssp' :: (Ord r, Fractional r)
+  => Int
+  -> PlaneGraph s Int PolygonEdgeType PolygonFaceData r
   -> SSSP
-sssp trig =
-    ssspFinger d
+sssp' index trig =
+    ssspFinger (PlaneGraph.numVertices trig) d
   where
-    Just v0 = fst <$> V.find (\(_vid, VertexData _ idx) -> idx == 0) (vertices trig)
+    Just v0 = fst <$> V.find (\(_vid, VertexData _ idx) -> idx == index) (vertices trig)
     v0i = incidentEdges v0 trig
     Just (FaceId firstFace) = V.find (/= FaceId outer) $ V.map (`leftFace` trig) v0i
     FaceId outer = PlaneGraph.outerFaceId trig
@@ -94,6 +98,12 @@ sssp trig =
     toCCW v =
       let cv = CV.reverse $ CV.unsafeFromVector v
       in CV.toVector $ fromMaybe cv $ CV.findRotateTo (== v0) cv
+
+-- | \( O(n) \) Single-Source shortest path.
+sssp :: (Ord r, Fractional r)
+  => PlaneGraph s Int PolygonEdgeType PolygonFaceData r
+  -> SSSP
+sssp = sssp' 0
 
 {-
 1. Find the starting face.
@@ -342,46 +352,44 @@ splitFunnel x Funnel{..}
     leftElt   = ringAccess <$> chainBottom funnelLeft
     rightElt  = ringAccess <$> chainBottom funnelRight
 
--- FIXME: Turning a list of pairs into a vector is incredibly inefficient.
---        Would be much faster to write directly into a mutable vector and
---        then freeze it at the end.
--- \( O(n) \)
-ssspFinger :: (Fractional r, Ord r) => Dual r -> SSSP
-ssspFinger d = toSSSP $
-    case d of
-      Dual (a,b,c) ab bc ca ->
-        (a, a) :
-        (b, a) :
-        (c, a) :
-        loopLeft a c ca ++
-        worker (Funnel (F.singleton c) a (F.singleton b)) bc ++
-        loopRight a b ab
+
+pattern Index' c d = Index (c :+ d)
+
+ssspFinger :: (Fractional r, Ord r) => Int -> Dual r -> SSSP
+ssspFinger n d = runST $ do
+  v <- VUM.new n
+  case d of
+    Dual (a,b,c) ab bc ca -> do
+      write v a a
+      write v b a
+      write v c a
+      loopLeft v a c ca
+      worker v (Funnel (F.singleton c) a (F.singleton b)) bc
+      loopRight v a b ab
+  VU.unsafeFreeze v
   where
-    toSSSP :: [(Index r,Index r)] -> SSSP
-    toSSSP lst =
-      VU.fromList . map snd . sortOn fst $
-      [ (a,b) | (Index (_ :+ a), Index (_ :+ b)) <- lst ]
-    loopLeft a outer l =
+    write v (Index' _ idx) (Index' _ val) = VUM.write v idx val
+    loopLeft v a outer l =
       case l of
-        EmptyDual -> []
-        NodeDual x l' r' ->
-          (x,a) :
-          worker (Funnel (F.singleton x) a (F.singleton outer)) r' ++
-          loopLeft a x l'
-    loopRight a outer r =
+        EmptyDual -> pure ()
+        NodeDual x l' r' -> do
+          write v x a
+          worker v (Funnel (F.singleton x) a (F.singleton outer)) r'
+          loopLeft v a x l'
+    loopRight v a outer r =
       case r of
-        EmptyDual -> []
-        NodeDual x l' r' ->
-          (x, a) :
-          worker (Funnel (F.singleton outer) a (F.singleton x)) l' ++
-          loopRight a x r'
-    worker _ EmptyDual = []
-    worker f (NodeDual x l r) =
+        EmptyDual -> pure ()
+        NodeDual x l' r' -> do
+          write v x a
+          worker v (Funnel (F.singleton outer) a (F.singleton x)) l'
+          loopRight v a x r'
+    worker _ _ EmptyDual = pure ()
+    worker vec f (NodeDual x l r) =
       case splitFunnel x f of
-        (v, fL, fR, _) ->
-          (x, v) :
-          worker fL l ++
-          worker fR r
+        (v, fL, fR, _) -> do
+          write vec x v
+          worker vec fL l
+          worker vec fR r
 
 
 --------------------------------------------------------------------------------
