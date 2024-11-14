@@ -25,6 +25,7 @@ import           Algorithms.Geometry.WSPD.Types
 import           Control.Lens hiding (Level, levels)
 import           Control.Monad.Reader
 import           Control.Monad.ST (ST,runST)
+import           Control.Monad
 import           Data.BinaryTree
 import           Data.Ext
 import qualified Data.Foldable as F

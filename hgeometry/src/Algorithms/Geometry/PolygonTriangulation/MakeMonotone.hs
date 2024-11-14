@@ -18,6 +18,7 @@ module Algorithms.Geometry.PolygonTriangulation.MakeMonotone
 
 import           Algorithms.Geometry.PolygonTriangulation.Types
 import           Control.Lens
+import           Control.Monad
 import           Control.Monad.Reader
 import           Control.Monad.State.Strict
 import           Control.Monad.Writer (WriterT, execWriterT, tell)

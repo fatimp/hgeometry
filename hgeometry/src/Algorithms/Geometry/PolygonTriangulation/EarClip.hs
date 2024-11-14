@@ -27,6 +27,7 @@ module Algorithms.Geometry.PolygonTriangulation.EarClip
   ) where
 
 import           Control.Lens                 ((^.))
+import           Control.Monad
 import           Control.Monad.Identity
 import           Control.Monad.ST             (ST, runST)
 import           Control.Monad.ST.Unsafe      (unsafeInterleaveST)
